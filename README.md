@@ -2,6 +2,8 @@
 
 A local, interactive workspace for turning SEEK job listings and your own experience into cover letters. Import a job, review the match, draft a letter, and copy it into your application on SEEK.
 
+[![CI and delivery](https://github.com/Williamlaiwei/seek-auto/actions/workflows/ci.yml/badge.svg)](https://github.com/Williamlaiwei/seek-auto/actions/workflows/ci.yml)
+
 Built with the Python standard library and plain HTML, CSS, and JavaScript. No Python packages, Node.js installation, or build step are needed to run the app.
 
 ## Quick start
@@ -15,6 +17,8 @@ python server.py
 ```
 
 Your browser opens at **http://127.0.0.1:8766**. On Windows, you can also double-click `start-web.cmd`.
+
+You can also download a tested ZIP from [GitHub Releases](https://github.com/Williamlaiwei/seek-auto/releases), extract it, and run `python server.py` from the extracted directory. Python is still required.
 
 ```sh
 python server.py --port 8767   # Use another port
@@ -77,7 +81,13 @@ The optional browser integration check requires **Node.js 22+ and Chrome**:
 node browser_check.mjs
 ```
 
-Set `CHROME_PATH` if Chrome is installed elsewhere. The check uses a disposable database and fake job/AI responses to verify importing, generation, editing, clipboard copying, revisions, persistence, key handling, and desktop/mobile layouts. Screenshots and browser profiles are written under the ignored `.local/` directory. These checks do not validate live AI quality or current SEEK endpoint availability.
+Set `CHROME_PATH` if Chrome is installed elsewhere. The check uses a disposable database and fake job/AI responses to verify importing, generation, editing, clipboard copying, revisions, persistence, key handling, and desktop/mobile layouts. Synthetic screenshots are written under the ignored `.local/` directory; the temporary database and browser profile are removed afterwards. These checks do not validate live AI quality or current SEEK endpoint availability.
+
+## CI/CD
+
+Pushes and pull requests automatically run backend tests on Python 3.10 and 3.14, plus browser and extracted-release checks on Windows and Linux. Passing runs deliver downloadable ZIP artifacts with SHA-256 checksums. Pushing a semantic version tag such as `v0.1.0` runs the same checks before publishing a GitHub Release.
+
+See the [CI/CD guide](docs/CI_CD.md) for downloading builds, publishing versions, rollback, and optional live SEEK diagnostics. Real AI credentials are not needed for CI.
 
 ## Project structure
 

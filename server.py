@@ -165,8 +165,10 @@ def completion(config, messages):
     except HTTPError as error:
         messages_by_code = {401: "The API key is invalid or lacks permission.", 403: "API access denied. Check permissions and service availability.",
                             429: "API quota exceeded or too many requests. Check your account and retry."}
-        raise RuntimeError(messages_by_code.get(error.code,
-            f"AI API returned HTTP {error.code}. Check the base URL, model, and JSON mode support.")) from None
+        message = messages_by_code.get(error.code,
+            f"AI API returned HTTP {error.code}. Check the base URL, model, and JSON mode support.")
+        error.close()
+        raise RuntimeError(message) from None
     except (URLError, TimeoutError, OSError):
         raise RuntimeError("AI API connection failed or timed out. Check the URL and your connection.") from None
     try:

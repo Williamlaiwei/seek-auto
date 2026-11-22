@@ -1,6 +1,7 @@
 // Local browser integration check; fake jobs and AI use an isolated, disposable DB.
 import { spawn } from 'node:child_process';
-import { mkdir, readFile, writeFile, unlink } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, unlink, rm } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -10,6 +11,11 @@ const root=dirname(fileURLToPath(import.meta.url));
 const local=resolve(root,'.local');await mkdir(local,{recursive:true});
 const id=randomUUID(), database=resolve(local,`browser-${id}.sqlite3`);
 const profile=resolve(local,`chrome-${id}`);
+const chromePath=process.env.CHROME_PATH || (process.platform==='win32'
+  ? [process.env.PROGRAMFILES,process.env['PROGRAMFILES(X86)'],process.env.LOCALAPPDATA]
+      .filter(Boolean).map(base=>resolve(base,'Google/Chrome/Application/chrome.exe')).find(existsSync)
+  : process.platform==='darwin' ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : 'google-chrome');
+assert.ok(chromePath,'Chrome not found. Set CHROME_PATH to its executable.');
 const program=`import sys; import server
 server.DATA=server.Path(sys.argv[1])
 server.seek.fetch_page=lambda *args: {'data':[{'id':12345678,'title':'Python Engineer','companyName':'Example Studio','locations':[{'label':'Sydney NSW'}],'teaser':'Build Python services in a hybrid team.','salaryLabel':'AUD 100,000 - 120,000'}]}
@@ -26,27 +32,40 @@ Thank you for considering my application.
 
 Kind regards,'''
 server.completion=lambda *args: {'ok':True,'score':82,'verdict':'Apply','summary':'Python experience matches; work rights still need confirmation.','strengths':['Experience building Python APIs'],'gaps':['Confirm the cloud technologies used by the team'],'must_confirm':['Australian work rights'],'next_steps':['Prepare relevant project evidence'],'cover_letter':letter}
-server.ThreadingHTTPServer(('127.0.0.1',18765),server.Handler).serve_forever()
+http=server.ThreadingHTTPServer(('127.0.0.1',0),server.Handler)
+print('http://127.0.0.1:'+str(http.server_port),flush=True)
+http.serve_forever()
 `;
-const backend=spawn('python',['-c',program,database],{cwd:root,windowsHide:true,stdio:['ignore','ignore','pipe']});
+const backend=spawn(process.env.PYTHON||'python',['-c',program,database],{cwd:root,windowsHide:true,stdio:['ignore','pipe','pipe']});
 let backendError='';backend.stderr.on('data',d=>backendError+=d);
-const chrome=spawn(process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',[
-  '--headless','--disable-gpu','--no-first-run','--no-default-browser-check',
+let backendOutput='';backend.stdout.on('data',d=>backendOutput+=d);
+backend.on('error',error=>backendError+=error.message);
+const chrome=spawn(chromePath,[
+  '--headless','--disable-gpu','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check',
   '--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'
 ],{windowsHide:true,stdio:['ignore','ignore','pipe']});
 let chromeError='';chrome.stderr.on('data',d=>chromeError+=d);
+chrome.on('error',error=>chromeError+=error.message);
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 let socket;
 try{
+  let base;
+  for(let n=0;n<100;n++){
+    base=backendOutput.match(/http:\/\/127\.0\.0\.1:\d+/)?.[0];
+    if(base)break;
+    if(backendError||backend.exitCode!==null)throw Error(`Backend failed: ${backendError}`);
+    await pause(100);
+  }
+  assert.ok(base,'Backend did not start');
   let port;
   for(let n=0;n<100;n++){
     try{port=Number((await readFile(resolve(profile,'DevToolsActivePort'),'utf8')).split('\n')[0]);break;}catch{}
-    if(chrome.exitCode!==null)throw Error(`Chrome exited: ${chromeError.slice(-600)}`);
+    if(chrome.exitCode!==null||!chrome.pid)throw Error(`Chrome exited: ${chromeError.slice(-600)}`);
     await pause(100);
   }
   assert.ok(port,'Chrome debugging did not start');
   for(let n=0;n<100;n++){
-    try{const r=await fetch('http://127.0.0.1:18765/api/state');if(r.ok)break;}catch{}
+    try{const r=await fetch(base+'/api/state');if(r.ok)break;}catch{}
     if(backend.exitCode!==null)throw Error(`Backend exited: ${backendError}`);
     await pause(100);
   }
@@ -60,7 +79,7 @@ try{
   const until=async expression=>{for(let n=0;n<100;n++){if(await evaluate(expression))return;await pause(80);}throw Error(`Timed out: ${expression}`);};
   await command('Runtime.enable');await command('Page.enable');
   await command('Emulation.setDeviceMetricsOverride',{width:1440,height:1050,deviceScaleFactor:1,mobile:false});
-  await command('Page.navigate',{url:'http://127.0.0.1:18765'});
+  await command('Page.navigate',{url:base});
   await until(`document.querySelector('#total-count')?.textContent==='0' && typeof ready==='function'`);
   await evaluate(`document.querySelector('#job-url').value='https://www.seek.com.au/job/12345678';document.querySelector('#import-form').requestSubmit()`);
   await until(`document.querySelectorAll('.studio-job').length===1 && !state.busy`);
@@ -72,7 +91,7 @@ try{
   const savedLetter=await evaluate(`document.querySelector('#letter-editor').value`);
   await evaluate(`document.querySelector('#letter-editor').value+=' Extra personal sentence.';document.querySelector('#letter-editor').dispatchEvent(new Event('input',{bubbles:true}))`);
   await until(`document.querySelector('#save-state')?.textContent==='Saved locally'`);
-  await command('Browser.grantPermissions',{origin:'http://127.0.0.1:18765',permissions:['clipboardReadWrite','clipboardSanitizedWrite']});
+  await command('Browser.grantPermissions',{origin:base,permissions:['clipboardReadWrite','clipboardSanitizedWrite']});
   await command('Page.bringToFront');
   await evaluate(`document.querySelector('#copy-button').click()`);
   await until(`document.querySelector('#copy-button').textContent.includes('copied')`);
@@ -103,6 +122,12 @@ try{
   console.log('PASS: import, personal settings, CL generation, editing + autosave, real clipboard, apply link, revision, persistence, key privacy, desktop + mobile layout.');
   console.log('Screenshots: .local/preview-desktop.png and .local/preview-mobile.png');
 }finally{
-  socket?.close();chrome.kill();backend.kill();await pause(500);
+  socket?.close();
+  const stop=async child=>{
+    if(!child.pid||child.exitCode!==null||child.signalCode!==null)return;
+    await new Promise(resolve=>{child.once('exit',resolve);child.kill();});
+  };
+  await Promise.all([stop(chrome),stop(backend)]);
   await unlink(database).catch(()=>{});
+  await rm(profile,{recursive:true,force:true,maxRetries:5,retryDelay:200}).catch(()=>{});
 }

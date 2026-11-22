@@ -31,7 +31,9 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
 API = "https://www.seek.com.au/api/jobsearch/v5/search"
-GRAPHQL = "https://www.seek.com.au/graphql"
+# The old www.seek.com.au endpoint returns a 308 redirect for POST requests.
+# urllib does not replay POST bodies for that redirect; use SEEK's canonical host.
+GRAPHQL = "https://au.seek.com/graphql"
 JOB_URL = "https://www.seek.com.au/job/"
 UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
