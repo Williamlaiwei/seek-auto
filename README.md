@@ -1,5 +1,11 @@
 # SEEK Auto — CL Studio
 
+**第二版 / Second edition: v0.2.0 · 2026-11-24**
+
+第二版讓 SEEK 搜尋欄位預設展開，開啟首頁就能輸入關鍵字與地點；並補齊版本差異、操作說明、升級與回復步驟。詳細內容請見 [第二版說明](docs/releases/v0.2.0.md) 與 [版本更新紀錄](CHANGELOG.md)。
+
+The second release opens the SEEK search form by default and adds detailed release and upgrade documentation. See the [v0.2.0 release notes](docs/releases/v0.2.0.md) and [changelog](CHANGELOG.md).
+
 A local, interactive workspace for turning SEEK job listings and your own experience into cover letters. Import a job, review the match, draft a letter, and copy it into your application on SEEK.
 
 [![CI and delivery](https://github.com/Williamlaiwei/seek-auto/actions/workflows/ci.yml/badge.svg)](https://github.com/Williamlaiwei/seek-auto/actions/workflows/ci.yml)
@@ -27,7 +33,7 @@ python server.py --no-browser # Start without opening a browser
 
 ## Features
 
-- Import a SEEK job URL, search Australian listings, or paste a job description manually.
+- Import a SEEK job URL, search Australian listings from the search form shown on the home page, or paste a job description manually.
 - Save your background, real examples, job preferences, and writing style locally.
 - Generate an English cover letter with a brief fit summary, strengths, gaps, and facts to confirm.
 - Edit drafts with automatic local saving, request revisions, and retain previous letter versions.
@@ -85,7 +91,7 @@ Set `CHROME_PATH` if Chrome is installed elsewhere. The check uses a disposable 
 
 ## CI/CD
 
-Pushes and pull requests automatically run backend tests on Python 3.10 and 3.14, plus browser and extracted-release checks on Windows and Linux. Passing runs deliver downloadable ZIP artifacts with SHA-256 checksums. Pushing a semantic version tag such as `v0.1.0` runs the same checks before publishing a GitHub Release.
+Pushes and pull requests automatically run backend tests on Python 3.10 and 3.14, plus browser and extracted-release checks on Windows and Linux. Passing runs deliver downloadable ZIP artifacts with SHA-256 checksums. Pushing a semantic version tag such as `v0.2.0` runs the same checks before publishing a GitHub Release. When `docs/releases/<tag>.md` exists, its detailed notes are used as the GitHub Release description.
 
 See the [CI/CD guide](docs/CI_CD.md) for downloading builds, publishing versions, rollback, and optional live SEEK diagnostics. Real AI credentials are not needed for CI.
 

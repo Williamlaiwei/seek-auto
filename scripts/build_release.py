@@ -8,7 +8,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RELEASE_FILES = (
-    "LICENSE", "README.md", "server.py", "seek_search.py", "start-web.cmd",
+    ".gitignore", "LICENSE", "README.md", "CHANGELOG.md", "docs/CI_CD.md",
+    "docs/releases/v0.2.0.md", "server.py", "seek_search.py", "start-web.cmd",
     "static/index.html", "static/app.js", "static/style.css", "static/studio.css",
 )
 

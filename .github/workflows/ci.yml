@@ -138,6 +138,9 @@ jobs:
       GH_REPO: ${{ github.repository }}
       RELEASE_TAG: ${{ github.ref_name }}
     steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: release-ubuntu-latest
@@ -147,6 +150,12 @@ jobs:
         run: sha256sum --check *.sha256
       - name: Create a draft with the tested archive, then publish it
         run: |
+          notes="docs/releases/$RELEASE_TAG.md"
+          if [ -f "$notes" ]; then
+            note_args=(--notes-file "$notes")
+          else
+            note_args=(--generate-notes)
+          fi
           gh release create "$RELEASE_TAG" dist/*.zip dist/*.sha256 \
-            --verify-tag --draft --generate-notes --title "SEEK Auto $RELEASE_TAG"
+            --verify-tag --draft "${note_args[@]}" --title "SEEK Auto $RELEASE_TAG"
           gh release edit "$RELEASE_TAG" --draft=false

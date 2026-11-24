@@ -28,16 +28,16 @@ Python 3.10+ must be installed. The archive includes `VERSION`, a per-file `MANI
 
 ## Publish a version
 
-Choose an unused semantic version after the commit on `main` passes CI:
+Choose an unused semantic version after the commit on `main` passes CI. The second release is `v0.2.0`; use the next unused version for future releases. Update the source `VERSION`, the UI version label, README, and CHANGELOG, then add detailed notes at `docs/releases/<tag>.md` before tagging:
 
 ```sh
 git switch main
 git pull --ff-only
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
-The tag starts a fresh run of the full workflow. A failed test blocks release publication. The release job downloads the previously tested archive, verifies its checksum, creates a draft with the assets, and publishes it after upload succeeds.
+The tag starts a fresh run of the full workflow. A failed test blocks release publication. The release job downloads the previously tested archive, verifies its checksum, creates a draft with the assets, and publishes it after upload succeeds. If `docs/releases/<tag>.md` exists in the tagged commit, that file supplies the Release description; otherwise GitHub generates the notes.
 
 Do not move a published tag. For fixes, publish the next version. If publication fails after creating a draft, inspect or remove the incomplete draft before rerunning the release job; the workflow deliberately does not overwrite an existing release.
 
@@ -49,11 +49,11 @@ To roll back locally, stop the app and run an older release from a separate dire
 python -m unittest discover -v
 node --check static/app.js
 node browser_check.mjs
-python scripts/build_release.py --version v0.1.0
-python scripts/smoke_release.py dist/seek-auto-v0.1.0.zip
+python scripts/build_release.py --version v0.2.0
+python scripts/smoke_release.py dist/seek-auto-v0.2.0.zip
 ```
 
-Set `CHROME_PATH` if Chrome is not found automatically. All test data is isolated from the normal application database. Release construction uses an explicit runtime-file list, so adding a new runtime asset also requires updating `RELEASE_FILES` in `scripts/build_release.py`.
+Set `CHROME_PATH` if Chrome is not found automatically. All test data is isolated from the normal application database. Release construction uses an explicit list of runtime files and shipped documentation, so adding a runtime asset or a new release document also requires updating `RELEASE_FILES` in `scripts/build_release.py`.
 
 ## Check external integrations
 
